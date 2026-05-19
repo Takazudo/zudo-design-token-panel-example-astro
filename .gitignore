@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.next/
+out/
+.zfb/
+.zfb-build/
+zfb-tailwind-entry-*.css
+
+# Playwright
+playwright-report/
+test-results/
