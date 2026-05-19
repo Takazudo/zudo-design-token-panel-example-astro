@@ -224,32 +224,21 @@ body {
 .astro-prose > :first-child { margin-block-start: 0; }
 .astro-prose > :last-child  { margin-block-end: 0; }
 
-/* Headings — type scale + gradient top-border */
+/* Headings — type scale + bottom-border */
 .astro-prose :where(h2) {
   font-size: var(--astro-text-h2);
   font-weight: 700;
   line-height: var(--astro-leading-tight);
-  padding-block-start: var(--astro-vsp-sm);
-  border-top: 3px solid transparent;
-  /* Gradient top-border: fg → muted, mirroring zudo-doc heading-h2.tsx pattern */
-  border-image: linear-gradient(
-    to right,
-    var(--astro-fg),
-    var(--astro-color-muted)
-  ) 1;
+  color: var(--astro-color-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--astro-color-muted);
 }
 
 .astro-prose :where(h3) {
   font-size: var(--astro-text-h3);
   font-weight: 600;
   line-height: var(--astro-leading-tight);
-  padding-block-start: var(--astro-vsp-xs);
-  border-top: 2px solid transparent;
-  border-image: linear-gradient(
-    to right,
-    var(--astro-fg),
-    var(--astro-color-muted)
-  ) 1;
+  color: var(--astro-fg);
 }
 
 .astro-prose :where(h4) {
@@ -292,7 +281,7 @@ body {
 /* Inline code */
 .astro-prose :where(:not(pre) > code) {
   font-family: var(--astro-font-mono);
-  font-size: var(--astro-text-micro);
+  font-size: var(--astro-text-helper);
   background: var(--astro-code-bg);
   color: var(--astro-code-fg);
   padding: var(--astro-hsp-xs) var(--astro-hsp-sm);
@@ -327,13 +316,13 @@ body {
 
 .astro-prose :where(th, td) {
   padding: var(--astro-hsp-xs) var(--astro-hsp-sm);
-  border: 1px solid var(--astro-color-muted);
+  border-bottom: 1px solid var(--astro-color-muted);
   text-align: left;
 }
 
 .astro-prose :where(th) {
   font-weight: 600;
-  background: var(--astro-color-surface);
+  border-bottom: 2px solid var(--astro-color-muted);
 }
 
 /* Links */
