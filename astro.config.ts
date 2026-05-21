@@ -40,6 +40,28 @@ export default defineConfig({
     port: 44324,
   },
   vite: {
+    // Required for zdtp#256 — dev-mode panel-mount crash when the panel is
+    // consumed via a `file:` link to a sibling clone. Vite serves the linked
+    // panel from its source (src/*.tsx) via @prefresh/vite for HMR; without
+    // these two settings, panel.tsx's `from 'preact/compat'` import resolves
+    // to the panel monorepo's own preact while the renderer uses the
+    // consumer's preact, splitting hooks-dispatcher state and throwing
+    // `Cannot read properties of undefined (reading '__H')`. `dedupe` forces
+    // all preact subpath resolutions to the consumer's copy; `optimizeDeps.include`
+    // ensures Vite prebundles them up front so a late re-optimization pass
+    // doesn't emit duplicate hooks chunks.
+    resolve: {
+      dedupe: ['preact', 'preact/compat', 'preact/hooks', 'preact/jsx-runtime'],
+    },
+    optimizeDeps: {
+      include: [
+        'preact',
+        'preact/compat',
+        'preact/hooks',
+        'preact/jsx-runtime',
+        'preact/jsx-dev-runtime',
+      ],
+    },
     server: {
       proxy: {
         '/api/dev/apply': {
