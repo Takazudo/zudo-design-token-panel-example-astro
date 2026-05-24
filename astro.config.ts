@@ -3,7 +3,7 @@ import mdx from '@astrojs/mdx';
 import preact from '@astrojs/preact';
 
 /**
- * Astro example for @takazudo/zudo-design-token-panel.
+ * Astro example for @takazudo/zdtp.
  *
  * Deliberately minimal: NO Tailwind, NO design-system integration, NO MDX.
  * The example proves the panel package works inside any Astro consumer that

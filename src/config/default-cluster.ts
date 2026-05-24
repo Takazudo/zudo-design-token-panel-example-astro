@@ -14,7 +14,7 @@
  * and includes success/warning semantic roles added in framework-demo-parity (#185).
  */
 
-import type { ColorClusterConfig as ColorClusterDataConfig } from '@takazudo/zudo-design-token-panel/astro';
+import type { ColorClusterConfig as ColorClusterDataConfig } from '@takazudo/zdtp/astro';
 
 export const defaultCluster: ColorClusterDataConfig = {
   id: 'astro-cluster',
