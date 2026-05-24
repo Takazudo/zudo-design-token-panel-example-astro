@@ -12,19 +12,24 @@
  *  - `tokens.css` declares every `--astro-*` variable on `:root` AND
  *    is the file the apply pipeline rewrites on disk (single source of
  *    truth for the round-trip).
- *  - `@takazudo/zudo-design-token-panel/styles` re-pulls the package's
+ *  - `@takazudo/zdtp/styles` re-pulls the package's
  *    bundled chrome stylesheet. Vite library mode strips the source CSS
  *    import from the emitted JS, so consumers must re-pull it explicitly.
  */
 
 import { ClientRouter } from 'astro:transitions';
-import { DesignTokenPanelHost } from '@takazudo/zudo-design-token-panel/astro';
+// Import the host component from its dedicated `.astro` export so Astro
+// compiles it natively. The `@takazudo/zdtp/astro` JS index statically pulls
+// this same `.astro`, which Node cannot load from node_modules at prerender
+// time (ERR_UNKNOWN_FILE_EXTENSION). Type-only imports from the JS index stay
+// fine since they are erased at build.
+import DesignTokenPanelHost from '@takazudo/zdtp/astro/DesignTokenPanelHost.astro';
 import { panelConfig } from '../config/panel-config';
 
 import '../styles/reset.css';
 import '../styles/tokens.css';
 import '../styles/components.css';
-import '@takazudo/zudo-design-token-panel/styles';
+import '@takazudo/zdtp/styles';
 
 interface Props {
   title: string;
@@ -54,5 +59,5 @@ const { title } = Astro.props;
   // Astro <script> blocks. The dynamic import lands as a real `import()`
   // call in the bundled output so the host-adapter chunk reliably reaches
   // prod and `window.<consoleNamespace>.*` exists at runtime.
-  void import('@takazudo/zudo-design-token-panel/astro/host-adapter');
+  void import('@takazudo/zdtp/astro/host-adapter');
 </script>
