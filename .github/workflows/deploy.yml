@@ -172,8 +172,15 @@ jobs:
             --preview-alias "pr-${PR_NUMBER}" \
             --message "Preview for PR #${PR_NUMBER}"
 
-          PREVIEW_URL=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // empty' \
-            "$WRANGLER_OUTPUT_FILE_PATH" | head -1)
+          # `tail -n 1`, not `head -1`: under the runner's default `bash -eo
+          # pipefail`, head closing the pipe early can SIGPIPE jq and fail the
+          # step with 141. The guard keeps a missing output file on the
+          # soft-skip path below instead of hard-failing on jq's read error.
+          PREVIEW_URL=""
+          if [ -s "$WRANGLER_OUTPUT_FILE_PATH" ]; then
+            PREVIEW_URL=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // empty' \
+              "$WRANGLER_OUTPUT_FILE_PATH" | tail -n 1)
+          fi
 
           if [ -z "$PREVIEW_URL" ]; then
             # Preview URLs additionally require the account to have a workers.dev
@@ -191,7 +198,9 @@ jobs:
         env:
           PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
         run: |
-          body=$(curl -fsSL "$PREVIEW_URL")
+          # A just-created preview alias can 404 / return edge errors for a few
+          # seconds while it propagates, so retry rather than fail the PR check.
+          body=$(curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors "$PREVIEW_URL")
           if ! grep -q "Astro Example — Design Token Panel" <<< "$body"; then
             echo "::error::Preview URL did not return expected content marker."
             exit 1
