@@ -10,3 +10,6 @@ zfb-tailwind-entry-*.css
 # Playwright
 playwright-report/
 test-results/
+
+# git worktrees (local only)
+worktrees/

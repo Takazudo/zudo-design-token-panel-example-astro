@@ -1,38 +1,20 @@
 # zudo-design-token-panel-example-astro
 
-A minimal Astro 6 + Preact app demonstrating `@takazudo/zudo-design-token-panel` — host-config-driven panel with live token tweaking and a full apply-pipeline round-trip via the bin sidecar (`design-token-panel-server`).
+A minimal Astro 6 + Preact app demonstrating `@takazudo/zdtp` — host-config-driven panel with live token tweaking and a full apply-pipeline round-trip via the bin sidecar (`zdtp-server`).
 
-Live: https://zudo-design-token-panel-example-astro.pages.dev/
+Live: https://zdtp-astro.zudolab.dev/
 
-## Sibling layout
+## Dependency on the panel package
 
-This repo expects the panel package to live as a sibling directory:
-
-```
-$HOME/repos/zdtp-ex/
-  zudo-design-token-panel/                       # upstream panel package (sibling)
-  zudo-design-token-panel-example-astro/         # this repo
-```
-
-The `package.json` references the panel via `file:../zudo-design-token-panel/packages/zudo-design-token-panel`, so that sibling must exist and have its `dist/` built before you can install or build this consumer.
-
-## Bootstrap (fresh machine)
-
-IMPORTANT: `pnpm install` alone WILL FAIL on a fresh checkout because the `file:../zudo-design-token-panel` sibling is not yet present. Always bootstrap with:
+The panel is consumed as a published npm package — `@takazudo/zdtp`, pinned to an exact version in `package.json`. There is no sibling checkout, no `file:` specifier, and no upstream build step, so a fresh clone needs nothing but:
 
 ```bash
-pnpm setup:upstream
+pnpm install
 ```
 
-This script (`scripts/setup-upstream.mjs`):
+That is what CI does too (`pnpm install --frozen-lockfile`), which is why the pin and `pnpm-lock.yaml` must always agree.
 
-1. Reads `PANEL_PINNED_SHA` from `.github/workflows/deploy.yml`.
-2. Clones `https://github.com/Takazudo/zudo-design-token-panel.git` into `../zudo-design-token-panel/` (or fetches + checks out the pin if the sibling already exists and is clean).
-3. Builds the panel package (`pnpm install --frozen-lockfile && pnpm -F @takazudo/zudo-design-token-panel build` inside the sibling).
-4. Runs `pnpm install` in this consumer.
-5. Runs `pnpm build` once to verify.
-
-If the sibling already exists but has uncommitted changes, the script exits with an error pointing you at `/dev-wip-package-upstream-wt-dev` for the upstream-dev workflow.
+Upstream sources live at [Takazudo/zudo-design-token-panel](https://github.com/Takazudo/zudo-design-token-panel), but this repo never builds them — it only installs the published artifact.
 
 ## Local dev commands
 
@@ -49,7 +31,7 @@ If the sibling already exists but has uncommitted changes, the script exits with
 | process | port  | role |
 | ------- | ----- | ---- |
 | Astro   | 44324 | the example site |
-| bin     | 24682 | `design-token-panel-server` — receives `/apply` POSTs, rewrites `tokens.css` |
+| bin     | 24682 | `zdtp-server` — receives `/apply` POSTs, rewrites `tokens.css` |
 
 The Astro dev server proxies `/api/dev/apply` to the bin (see `astro.config.ts`), so the panel POSTs to a same-origin URL — no CORS preflight, no hardcoded port in the runtime config.
 
@@ -94,7 +76,6 @@ zudo-design-token-panel-example-astro/
 ├── playwright.config.ts        # apply-roundtrip e2e config
 ├── scaffold.routing.json       # CSS-var prefix → file map (shared by panel + bin)
 ├── scripts/
-│   ├── setup-upstream.mjs      # bootstrap: clone/update panel sibling + build
 │   └── smoke-apply.mjs         # non-UI smoke harness for the bin
 ├── src/
 │   ├── components/
