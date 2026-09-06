@@ -2,7 +2,7 @@
 
 A minimal Astro 6 + Preact app demonstrating `@takazudo/zudo-design-token-panel` — host-config-driven panel with live token tweaking and a full apply-pipeline round-trip via the bin sidecar (`design-token-panel-server`).
 
-Live: https://zudo-design-token-panel-example-astro.pages.dev/
+Live: https://zdtp-astro.zudolab.dev/
 
 ## Sibling layout
 
