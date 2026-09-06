@@ -6,12 +6,13 @@ Live: https://zdtp-astro.zudolab.dev/
 
 ## Dependency on the panel package
 
-The panel is consumed as a published npm package — `@takazudo/zdtp`, pinned to an exact version in `package.json`. There is no sibling checkout, no `file:` specifier, and no upstream build step: `pnpm install` on a fresh clone is enough, and it is exactly what the deploy workflow does.
+The panel is consumed as a published npm package — `@takazudo/zdtp`, pinned to an exact version in `package.json`. There is no sibling checkout, no `file:` specifier, and no upstream build step, so a fresh clone needs nothing but:
 
 ```bash
 pnpm install
-pnpm dev
 ```
+
+That is what CI does too (`pnpm install --frozen-lockfile`), which is why the pin and `pnpm-lock.yaml` must always agree.
 
 Upstream sources live at [Takazudo/zudo-design-token-panel](https://github.com/Takazudo/zudo-design-token-panel), but this repo never builds them — it only installs the published artifact.
 
