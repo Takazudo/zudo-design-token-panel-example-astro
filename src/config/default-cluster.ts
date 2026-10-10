@@ -1,7 +1,7 @@
 /**
  * Demo color cluster for the Astro example.
  *
- * The cluster's CSS-var family is `--zfbtw-*` (palette + base roles +
+ * The cluster's CSS-var family is `--astro-*` (palette + base roles +
  * semantic names), declared on `:root` by `src/styles/tokens.css`. Tweaks in
  * the panel write through these names; the apply pipeline (when wired through
  * the bin sidecar) rewrites the same names on disk.
@@ -10,20 +10,21 @@
  * The cluster is JSON-serializable end-to-end so it round-trips through the
  * Astro frontmatter → island JSON boundary.
  *
- * Synced to zfb-tailwind reference cluster (#320): --astro-* → --zfbtw-*.
+ * Token set synced to the zfb-tailwind reference cluster (#320) with the
+ * --zfbtw-* → --astro-* prefix substitution that tokens.css declares.
  */
 
 import type { ColorClusterConfig as ColorClusterDataConfig } from '@takazudo/zdtp/astro';
 
 export const defaultCluster: ColorClusterDataConfig = {
-  id: 'zfbtw-cluster',
-  label: 'zfb Tailwind Example',
+  id: 'astro-cluster',
+  label: 'Astro Example',
   paletteSize: 16,
   baseRoles: {
-    background: '--zfbtw-bg',
-    foreground: '--zfbtw-fg',
+    background: '--astro-bg',
+    foreground: '--astro-fg',
   },
-  paletteCssVarTemplate: '--zfbtw-palette-{n}',
+  paletteCssVarTemplate: '--astro-palette-{n}',
   semanticDefaults: {
     primary: 1,
     accent: 3,
@@ -34,13 +35,13 @@ export const defaultCluster: ColorClusterDataConfig = {
     danger: 5,
   },
   semanticCssNames: {
-    primary: '--zfbtw-color-primary',
-    accent:  '--zfbtw-color-accent',
-    surface: '--zfbtw-color-surface',
-    muted:   '--zfbtw-color-muted',
-    success: '--zfbtw-color-success',
-    warning: '--zfbtw-color-warning',
-    danger:  '--zfbtw-color-danger',
+    primary: '--astro-color-primary',
+    accent:  '--astro-color-accent',
+    surface: '--astro-color-surface',
+    muted:   '--astro-color-muted',
+    success: '--astro-color-success',
+    warning: '--astro-color-warning',
+    danger:  '--astro-color-danger',
   },
   baseDefaults: {
     background: 0,

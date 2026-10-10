@@ -40,21 +40,21 @@ export default defineConfig({
     port: 44324,
   },
   vite: {
-    // Required for zdtp#256 — dev-mode panel-mount crash when the panel is
-    // consumed via a `file:` link to a sibling clone. Vite serves the linked
-    // panel from its source (src/*.tsx) via @prefresh/vite for HMR; without
-    // these two settings, panel.tsx's `from 'preact/compat'` import resolves
-    // to the panel monorepo's own preact while the renderer uses the
-    // consumer's preact, splitting hooks-dispatcher state and throwing
-    // `Cannot read properties of undefined (reading '__H')`. `dedupe` forces
-    // all preact subpath resolutions to the consumer's copy; `optimizeDeps.include`
-    // ensures Vite prebundles them up front so a late re-optimization pass
-    // doesn't emit duplicate hooks chunks.
-    resolve: {
-      dedupe: ['preact', 'preact/compat', 'preact/hooks', 'preact/jsx-runtime'],
-    },
+    // Prebundle what Vite's dev dependency scan cannot see from static
+    // imports: the host adapter (a dynamic `import()` in Layout.astro), the
+    // ClientRouter runtime, and the Preact island runtime. Discovered late,
+    // they re-optimize deps on the first page load, which answers the
+    // in-flight adapter import with 504 "Outdated Optimize Dep" and the panel
+    // silently fails to load on that page. The panel owns its own Preact
+    // dependency (zdtp >= 0.8), so no `resolve.dedupe` is needed to share the
+    // host's copy.
     optimizeDeps: {
       include: [
+        '@takazudo/zdtp/astro/host-adapter',
+        'astro/virtual-modules/transitions-router.js',
+        'astro/virtual-modules/transitions-types.js',
+        'astro/virtual-modules/transitions-events.js',
+        'astro/virtual-modules/transitions-swap-functions.js',
         'preact',
         'preact/compat',
         'preact/hooks',
