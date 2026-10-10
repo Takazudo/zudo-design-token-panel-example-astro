@@ -16,12 +16,13 @@
     "build": "astro build",
     "preview": "astro preview --port 44324",
     "typecheck": "astro check",
-    "test:apply-smoke": "node scripts/smoke-apply.mjs"
+    "test:apply-smoke": "node scripts/smoke-apply.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
     "@astrojs/preact": "^5.1.1",
-    "@takazudo/zdtp": "0.5.1",
+    "@takazudo/zdtp": "0.8.6",
     "astro": "^6.4.8",
     "preact": "^10.29.8"
   },
