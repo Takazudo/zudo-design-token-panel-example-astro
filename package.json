@@ -12,7 +12,7 @@
     "predev": "lsof -ti:44324 | xargs kill 2>/dev/null; lsof -ti:24682 | xargs kill 2>/dev/null; true",
     "dev": "concurrently -k -n astro,tokens-bin -c blue,green \"pnpm run _dev:astro\" \"pnpm run _dev:tokens-bin\"",
     "_dev:astro": "astro dev --port 44324",
-    "_dev:tokens-bin": "zdtp-server --write-root . --routing scaffold.routing.json --port 24682 --allow-origin http://localhost:44324",
+    "_dev:tokens-bin": "zdtp-server --write-root . --routing missing-routing.json --port 24682 --allow-origin http://localhost:44324",
     "build": "astro build",
     "preview": "astro preview --port 44324",
     "typecheck": "astro check",
