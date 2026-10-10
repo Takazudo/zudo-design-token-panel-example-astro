@@ -125,3 +125,5 @@ zudo-design-token-panel-example-astro/
 │       └── routes-smoke.spec.ts
 └── tsconfig.json
 ```
+
+<!-- proof: content-only change for the browser job skip path -->
