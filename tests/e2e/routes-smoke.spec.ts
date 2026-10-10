@@ -1,34 +1,26 @@
 /**
  * Routes-smoke spec for the Astro example.
  *
- * Visits each primary route and asserts:
+ * Visits every route (full loads via `page.goto`) and asserts:
  *   1. The page-level heading (.astro-page-title) is visible.
  *   2. (widgets only) Each of the three tabs can be clicked and the active
  *      tab class moves to the clicked tab.
  *   3. (data only) All 5 data-component class selectors are present on the page.
  *
- * Prerequisites
- * -------------
- *  - Astro dev server on port 44324 (started by the Playwright `webServer`
- *    config OR by an upstream `pnpm dev` invocation).
+ * The `diagnostics` fixture from ./support additionally fails a route on any
+ * console error, page error, or failed request.
  *
- * Route inventory (6 routes tested):
+ * Route inventory (all 7 routes):
  *   /                   → Home
+ *   /about              → About
  *   /prose              → Prose typography demo
  *   /components/forms   → Form controls demo
  *   /components/status  → Status badges / indicators
  *   /components/widgets → Interactive widgets (tabs assertion)
  *   /components/data    → Data components (data-component assertion)
- *
- * About (/about) is excluded per sub-issue scope — it is a view-transition
- * parity check handled separately.
- *
- * Astro uses real URL paths (no hash router).
- * The BASE_URL env var adjusts the origin for CI; trailing slash is added
- * by Astro's trailingSlash default.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, test } from './support';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,6 +33,7 @@ import { test, expect } from '@playwright/test';
  */
 const PAGE_TITLE_ROUTES = [
   { label: 'Home',    path: '/',                      heading: /live token tweaking/i        },
+  { label: 'About',   path: '/about',                 heading: /about this example/i         },
   { label: 'Forms',   path: '/components/forms',      heading: /form controls/i              },
   { label: 'Status',  path: '/components/status',     heading: /status/i                     },
   { label: 'Widgets', path: '/components/widgets',    heading: /widgets/i                    },
@@ -113,9 +106,8 @@ test.describe('Astro example — routes smoke', () => {
   //   StatCard    → .astro-stat-value  (unique — not used elsewhere on the page)
   //   AvatarRow   → .astro-avatar.is-sm
   //   ProfileCard → .astro-avatar.is-md
-  //   MediaCard   → .astro-card + inline aspect-ratio placeholder (use .astro-card
-  //                 — present for both ProfileCard and MediaCard so not unique by
-  //                 itself, but combined with the count assertion it suffices)
+  //   .astro-card is the shared root of StatCard (x3), ProfileCard (x2) and
+  //   MediaCard (x1), so the page renders exactly 6 of them.
   //   DataTable   → .astro-table       (unique — only used for DataTable)
   // -------------------------------------------------------------------------
 
@@ -132,9 +124,8 @@ test.describe('Astro example — routes smoke', () => {
     // ProfileCard: medium avatars with .is-md modifier
     await expect(page.locator('.astro-avatar.is-md').first()).toBeAttached({ timeout: 5_000 });
 
-    // MediaCard: uses .astro-card as root (shared with ProfileCard; at least 3 present)
-    // — assert ≥ 3 .astro-card elements: 2 profile cards + 1 media card
-    await expect(page.locator('.astro-card')).toHaveCount(3);
+    // 3 StatCards + 2 ProfileCards + 1 MediaCard
+    await expect(page.locator('.astro-card')).toHaveCount(6);
 
     // DataTable: wraps the table in .astro-table
     await expect(page.locator('.astro-table').first()).toBeVisible({ timeout: 5_000 });

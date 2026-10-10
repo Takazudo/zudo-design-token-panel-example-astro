@@ -1,150 +1,90 @@
 /**
- * Apply-pipeline round-trip spec for the Astro example.
+ * Apply-pipeline round-trip, driven through the panel UI.
  *
- * Drives the panel UI to tweak a token, click Apply, and asserts the demo
- * tokens CSS file on disk (`src/styles/tokens.css`) was rewritten by the
- * bin sidecar. The full bin → file rewrite path is what the spec proves;
- * the panel's in-memory `:root` override is exercised as a side effect.
+ * Header trigger → Size tab → edit `--astro-radius` → header Apply → apply
+ * modal "Write 1 file" → POST /api/dev/apply (Vite proxy) → zdtp-server →
+ * `src/styles/tokens.css` rewritten on disk.
  *
- * Prerequisites
- * -------------
- *  - Astro dev server on port 44324 (started by the Playwright `webServer`
- *    config OR by an upstream `pnpm dev` invocation).
- *  - Bin sidecar `design-token-panel-server` on port 24682, with
- *    `--write-root .` and `--routing scaffold.routing.json` pointing at
- *    this example's tree.
- *
- * Both are wired by `pnpm dev` (concurrently), so the local-run flow is:
- *
- *   pnpm --filter astro-example dev
- *   # in another shell:
- *   pnpm --filter astro-example exec playwright test
- *
- * Try/finally restores the original token value so re-running the spec is
- * idempotent. The original value is captured at the start; if any assertion
- * fails before restoration, the after-hook still rewrites the original
- * value via the bin so the file on disk lands in a known-good state.
+ * The file's original bytes are captured before the test. The assertion is
+ * byte-exact: the rewritten file must equal the original with exactly the one
+ * declaration line changed. `afterEach` writes the captured bytes back and
+ * asserts the restored file equals them byte-for-byte — it runs even when the
+ * test fails. Serial mode (plus `workers: 1` in the config) keeps any other
+ * spec from observing the file mid-rewrite.
  */
 
-import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import {
+  TOKENS_PATH,
+  clickHeaderAction,
+  expect,
+  openViaHeader,
+  rootTokenValue,
+  setLengthToken,
+  test,
+} from './support';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const TOKENS_PATH = resolve(__dirname, '..', '..', 'src', 'styles', 'tokens.css');
-const APPLY_URL = 'http://127.0.0.1:24682/apply';
-const ORIGIN = 'http://localhost:44324';
+test.describe.configure({ mode: 'serial' });
 
-const STORAGE_PREFIX = 'astro-example-tokens';
-const STORAGE_KEY_VISIBLE = `${STORAGE_PREFIX}:visible`;
+const TARGET_VAR = '--astro-radius';
+const ORIGINAL_LINE = `  ${TARGET_VAR}: 0.5rem;`;
+const APPLIED_LINE = `  ${TARGET_VAR}: 1.25rem;`;
 
-async function readTokenValue(cssVar: string): Promise<string> {
-  const css = await readFile(TOKENS_PATH, 'utf-8');
-  const escaped = cssVar.replace(/-/g, '\\-');
-  const re = new RegExp(`${escaped}:\\s*([^;]+);`);
-  const m = css.match(re);
-  if (!m) {
-    throw new Error(`Could not find ${cssVar} in ${TOKENS_PATH}`);
+let originalBytes: Buffer;
+
+test.beforeAll(async () => {
+  originalBytes = await readFile(TOKENS_PATH);
+});
+
+test.afterEach(async () => {
+  const current = await readFile(TOKENS_PATH);
+  if (!current.equals(originalBytes)) {
+    await writeFile(TOKENS_PATH, originalBytes);
   }
-  return m[1].trim();
-}
+  const restored = await readFile(TOKENS_PATH);
+  expect(restored.equals(originalBytes), 'tokens.css restored byte-for-byte').toBe(true);
+});
 
-async function postApply(cssVar: string, value: string): Promise<void> {
-  const response = await fetch(APPLY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Origin: ORIGIN,
-    },
-    body: JSON.stringify({ tokens: { [cssVar]: value } }),
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`POST /apply failed (${response.status}): ${text}`);
-  }
-}
+test('panel Apply rewrites tokens.css on disk with exactly the edited declaration', async ({
+  page,
+}) => {
+  const originalText = originalBytes.toString('utf8');
+  expect(originalText.split(ORIGINAL_LINE)).toHaveLength(2);
+  const expectedBytes = Buffer.from(originalText.replace(ORIGINAL_LINE, APPLIED_LINE), 'utf8');
 
-test.describe('Astro example — apply pipeline round-trip', () => {
-  const TARGET_VAR = '--astro-radius';
-  const TEST_VALUE = '1.25rem';
-  let originalValue = '';
+  await page.goto('/');
+  await openViaHeader(page);
+  await setLengthToken(page, /^size$/i, TARGET_VAR, '1.25');
+  expect(await rootTokenValue(page, TARGET_VAR)).toBe('1.25rem');
 
-  test.beforeAll(async () => {
-    originalValue = await readTokenValue(TARGET_VAR);
-    if (originalValue === TEST_VALUE) {
-      throw new Error(
-        `Test value ${TEST_VALUE} matches original — pick a different test value.`,
-      );
-    }
-  });
+  await clickHeaderAction(page, 'apply');
+  const writeButton = page.getByRole('button', { name: /^Write 1 file \(1 token\)$/ });
+  await expect(writeButton).toBeVisible();
 
-  test.afterAll(async () => {
-    // Restore the original token value via the bin so the test file lands
-    // in a known-good state regardless of how the test exited.
-    if (originalValue) {
-      try {
-        await postApply(TARGET_VAR, originalValue);
-      } catch {
-        // Best-effort restoration — the in-band assertion already failed if
-        // we get here; surfacing the secondary error would mask the primary.
-      }
-    }
-  });
+  // Opening the modal already POSTs a dry-run preview; wait for the real write.
+  const writeResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/dev/apply') &&
+      response.request().method() === 'POST' &&
+      (response.request().postDataJSON() as { dryRun?: boolean }).dryRun !== true,
+  );
+  await writeButton.click();
+  const response = await writeResponse;
+  expect(response.status()).toBe(200);
+  // Success envelope: PORTABLE-CONTRACT §5.1 "Response 200 (success)".
+  const body = (await response.json()) as {
+    ok: boolean;
+    updated: Array<{ file: string; changed: string[] }>;
+  };
+  expect(body.ok).toBe(true);
+  expect(body.updated.map(({ file, changed }) => ({ file, changed }))).toEqual([
+    { file: 'src/styles/tokens.css', changed: [TARGET_VAR] },
+  ]);
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
 
-  test('panel-driven Apply rewrites the on-disk token value', async ({ page }) => {
-    // Step 1: seed visibility intent so the host adapter eagerly mounts the
-    // panel pre-paint (avoids needing a console-API call in the spec body).
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    // The canonical truthy value is '1' — see packages/.../src/index.tsx.
-    await page.evaluate((visibleKey) => {
-      localStorage.setItem(visibleKey, '1');
-    }, STORAGE_KEY_VISIBLE);
-
-    // Step 2: hard-reload — adapter must mount the panel before paint.
-    await page.reload();
-    await page.waitForLoadState('domcontentloaded');
-
-    // Step 3: open the Size tab and set the radius slider to TEST_VALUE.
-    // The panel ships role-tagged tabs; pick the Size tab and drive the
-    // first numeric input within it. The exact selector path depends on
-    // the panel's rendered DOM; the deferred verification step in the
-    // README covers the click-Apply phase manually.
-    const sizeTab = page.getByRole('tab', { name: /size/i });
-    await sizeTab.waitFor({ state: 'visible', timeout: 5000 });
-    await sizeTab.click();
-
-    const radiusInput = page.getByLabel(/border radius/i).first();
-    await radiusInput.waitFor({ state: 'visible', timeout: 5000 });
-    await radiusInput.fill('1.25');
-
-    // Step 4: click the Apply button in the panel chrome and confirm in
-    // the resulting modal.
-    const applyButton = page.getByRole('button', { name: /^apply$/i }).first();
-    await applyButton.waitFor({ state: 'visible', timeout: 5000 });
-    await applyButton.click();
-
-    const confirmButton = page.getByRole('button', { name: /confirm|apply now|write/i }).first();
-    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
-    await confirmButton.click();
-
-    // Step 5: poll the file on disk for the rewritten value. The bin
-    // writes atomically via a temp-file rename, so the new contents
-    // appear in a single fs operation; polling avoids a race with the
-    // server's HTTP response landing before the rename completes.
-    await expect
-      .poll(
-        async () => {
-          try {
-            return await readTokenValue(TARGET_VAR);
-          } catch {
-            return '';
-          }
-        },
-        { timeout: 5000, intervals: [100, 250, 500] },
-      )
-      .toBe(TEST_VALUE);
-  });
+  await expect
+    .poll(async () => (await readFile(TOKENS_PATH)).equals(expectedBytes), {
+      message: 'tokens.css equals the original with only the edited line changed',
+    })
+    .toBe(true);
 });
