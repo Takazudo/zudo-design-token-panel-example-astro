@@ -24,6 +24,7 @@ Upstream sources live at [Takazudo/zudo-design-token-panel](https://github.com/T
 | `pnpm build` | Static build into `dist/` |
 | `pnpm preview` | Preview the static build locally |
 | `pnpm typecheck` | Run `astro check` |
+| `pnpm test:e2e` | Playwright browser suite (starts Astro + the bin sidecar itself; reuses them locally if already running) |
 | `pnpm test:apply-smoke` | Non-UI smoke test for the apply pipeline (requires `pnpm dev` running) |
 
 `pnpm dev` runs two processes via `concurrently`:
@@ -35,7 +36,7 @@ Upstream sources live at [Takazudo/zudo-design-token-panel](https://github.com/T
 
 The Astro dev server proxies `/api/dev/apply` to the bin (see `astro.config.ts`), so the panel POSTs to a same-origin URL — no CORS preflight, no hardcoded port in the runtime config.
 
-Open http://localhost:44324 and run `window.astro.toggleDesignPanel()` in the browser console to show the panel. Drag any slider — the page repaints before the next frame.
+Open http://localhost:44324 and click **Open Design Token Panel** in the topbar (or run `window.astro.toggleDesignPanel()` in the browser console). Drag any slider — the page repaints before the next frame.
 
 ## Apply-pipeline smoke check
 
@@ -46,6 +47,18 @@ pnpm test:apply-smoke
 ```
 
 Requires `pnpm dev` to be running first.
+
+## Browser suite and CI
+
+`tests/e2e/` drives the panel through its real UI against the real dev topology: the Playwright `webServer` starts `_dev:astro` and `_dev:tokens-bin` (the two halves of `pnpm dev`), and `tests/e2e/global-setup.ts` checks that the sidecar is this checkout's before any spec runs. Coverage:
+
+- **Apply round-trip** — edit `--astro-radius` in the panel, Apply, and assert `src/styles/tokens.css` changed by exactly that line; the original bytes are restored and verified byte-for-byte after the test, pass or fail.
+- **ClientRouter navigation** — sidenav navigation and back/forward keep the same document (a `window.__marker` survives) and exactly one panel instance.
+- **Panel lifecycle** — open/close via the topbar trigger; visibility and token edits persist across navigation and reload.
+- **Token edits** — font, spacing and color edits change the computed style of visible elements.
+- **Errors** — every test fails on any console error, page error, or failed request.
+
+CI (`.github/workflows/deploy.yml`) runs a blocking `browser` job on every pull request and on pushes to `main`. A change-detection step runs the suite for anything but content-only changes (`*.md` / `*.mdx` and files outside the source, test, config and CI trees); content-only changes log `skipped: content-only` and pass. The `preview` job skips draft pull requests.
 
 ## What the example proves
 
@@ -73,9 +86,10 @@ All routes are wrapped in `AppLayout.astro`, which provides a topbar and sidenav
 zudo-design-token-panel-example-astro/
 ├── astro.config.ts             # Astro + preact + /api/dev/apply proxy
 ├── package.json                # dev = astro + bin sidecar
-├── playwright.config.ts        # apply-roundtrip e2e config
+├── playwright.config.ts        # browser suite: Astro + sidecar webServers
 ├── scaffold.routing.json       # CSS-var prefix → file map (shared by panel + bin)
 ├── scripts/
+│   ├── browser-relevant-changes.sh  # CI change detection for the browser job
 │   └── smoke-apply.mjs         # non-UI smoke harness for the bin
 ├── src/
 │   ├── components/
@@ -102,6 +116,12 @@ zudo-design-token-panel-example-astro/
 │       └── components.css      # frozen host-class vocabulary
 ├── tests/
 │   └── e2e/
-│       └── apply-roundtrip.spec.ts
+│       ├── global-setup.ts     # proves the right server + sidecar are up
+│       ├── support.ts          # error-gated `test` fixture + panel helpers
+│       ├── apply-roundtrip.spec.ts
+│       ├── navigation-lifecycle.spec.ts
+│       ├── token-tweak-style.spec.ts
+│       ├── highlight.spec.ts
+│       └── routes-smoke.spec.ts
 └── tsconfig.json
 ```
