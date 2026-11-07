@@ -10,8 +10,13 @@
 #             otherwise it boots the real Astro dev server + zdtp-server
 #             sidecar and fails whenever the suite fails (including a server
 #             or sidecar that does not start). Needs no credentials.
-#   deploy  — push to `main` only: `wrangler deploy` (uploads the Worker AND
-#             attaches the custom domain from wrangler.toml).
+#             Dependency manifests, the lockfile and this workflow always count
+#             as browser-relevant, and a change-detection failure fails the job.
+#   deploy  — push to `main` only, and only after BOTH `build` and `browser`
+#             succeeded (a skipped, failed or cancelled dependency blocks it).
+#             A content-only push still deploys: its `browser` job succeeds
+#             with the suite steps skipped. Runs `wrangler deploy` (uploads the
+#             Worker AND attaches the custom domain from wrangler.toml).
 #   preview — non-draft pull requests only: uploads a preview version, asserts the
 #             preview actually serves real content, and comments its URL on
 #             the PR. Uses `wrangler versions upload`, which does NOT touch
@@ -170,8 +175,11 @@ jobs:
 
   deploy:
     name: Deploy to Cloudflare Workers
-    needs: build
-    if: github.event_name == 'push'
+    needs: [build, browser]
+    if: >-
+      github.event_name == 'push' &&
+      needs.build.result == 'success' &&
+      needs.browser.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
