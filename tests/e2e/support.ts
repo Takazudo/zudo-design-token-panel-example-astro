@@ -9,6 +9,8 @@
  */
 
 import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +25,16 @@ export const HOME_TITLE = 'Astro Example — Design Token Panel';
 // The panel derives its root id from `storagePrefix` in src/config/panel-config.ts.
 export const PANEL_ROOT_ID = 'astro-example-tokens-root';
 export const STORAGE_PREFIX = 'astro-example-tokens';
+
+/** `version` of the @takazudo/zdtp actually installed in node_modules, read at test time. */
+export function installedZdtpVersion(): string {
+  const manifestPath = createRequire(import.meta.url).resolve('@takazudo/zdtp/package.json');
+  const { version } = JSON.parse(readFileSync(manifestPath, 'utf8')) as { version?: unknown };
+  if (typeof version !== 'string' || version === '') {
+    throw new Error(`no version in ${manifestPath}`);
+  }
+  return version;
+}
 
 export const test = base.extend<{ diagnostics: string[] }>({
   diagnostics: [
@@ -76,6 +88,19 @@ export async function openViaHeader(page: Page): Promise<void> {
   await expect(panelShell(page)).toHaveCount(0);
   await toggleViaHeader(page);
   await expect(panelShell(page)).toBeVisible();
+  await expectShellBuiltByInstalledZdtp(page);
+}
+
+/**
+ * The one mounted, visible shell carries `data-zdtp-version` equal to the
+ * installed package's version — i.e. the page runs the zdtp build this
+ * checkout installed, not a stale or foreign copy.
+ */
+export async function expectShellBuiltByInstalledZdtp(page: Page): Promise<void> {
+  const shell = panelShell(page);
+  await expect(shell).toHaveCount(1);
+  await expect(shell).toBeVisible();
+  await expect(shell).toHaveAttribute('data-zdtp-version', installedZdtpVersion());
 }
 
 export async function closeViaHeader(page: Page): Promise<void> {

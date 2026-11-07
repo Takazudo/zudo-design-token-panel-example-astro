@@ -13,6 +13,7 @@
 import {
   closeViaHeader,
   expect,
+  expectShellBuiltByInstalledZdtp,
   expectSinglePanelInstance,
   navigateViaSidenav,
   openViaHeader,
@@ -79,6 +80,7 @@ test('sidenav navigation and back/forward are client-side swaps that keep one op
   await expectSameDocument(page);
   await expectSinglePanelInstance(page, 1);
   await expect(panelShell(page)).toBeVisible();
+  await expectShellBuiltByInstalledZdtp(page);
 });
 
 test('repeated open/close across navigation never duplicates the panel', async ({ page }) => {
@@ -106,6 +108,7 @@ test('panel visibility persists across navigation and reload', async ({ page }) 
   await page.reload();
   await expect(panelShell(page)).toBeVisible();
   await expectSinglePanelInstance(page, 1);
+  await expectShellBuiltByInstalledZdtp(page);
 
   await closeViaHeader(page);
   await navigateViaSidenav(page, 'About', /\/about\/?$/);
