@@ -22,7 +22,7 @@
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
     "@astrojs/preact": "^5.1.1",
-    "@takazudo/zdtp": "0.8.6",
+    "@takazudo/zdtp": "0.9.1",
     "astro": "^6.4.8",
     "preact": "^10.29.8"
   },
