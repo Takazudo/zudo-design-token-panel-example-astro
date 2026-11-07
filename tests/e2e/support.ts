@@ -121,13 +121,17 @@ export async function navigateViaSidenav(page: Page, label: string, path: RegExp
 /**
  * Exactly one panel instance: one panel root, one set of the panel's
  * document-level mounts, and at most one shell.
+ *
+ * Since zdtp 0.9 the DOM Tweaker mount exists only when `PanelConfig.domTweaker`
+ * is set. This host leaves it unset, so that mount must be absent.
  */
 export async function expectSinglePanelInstance(page: Page, shellCount: 0 | 1): Promise<void> {
   await expect(page.locator(`[id="${PANEL_ROOT_ID}"]`)).toHaveCount(1);
   await expect(page.locator('script#tokenpanel-config')).toHaveCount(1);
-  for (const mount of ['highlight', 'elpath', 'element-inspect', 'domtweaker']) {
+  for (const mount of ['highlight', 'elpath', 'element-inspect']) {
     await expect(page.locator(`[id="tokenpanel-${mount}-mount"]`)).toHaveCount(1);
   }
+  await expect(page.locator('[id="tokenpanel-domtweaker-mount"]')).toHaveCount(0);
   await expect(panelShell(page)).toHaveCount(shellCount);
 }
 
