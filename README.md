@@ -16,6 +16,16 @@ That is what CI does too (`pnpm install --frozen-lockfile`), which is why the pi
 
 Upstream sources live at [Takazudo/zudo-design-token-panel](https://github.com/Takazudo/zudo-design-token-panel), but this repo never builds them — it only installs the published artifact.
 
+Since zdtp 0.9 the panel renders with its own bundled zudo-react runtime and no longer depends on Preact. The `preact` / `@astrojs/preact` dependencies here belong to the host: they power this example's own islands (`src/components/widgets/Tabs.tsx`, `Modal.tsx`).
+
+To see which zdtp build is running on a page, open the panel and read the shell's version marker in the browser console:
+
+```js
+document.querySelector('.tokenpanel-shell')?.dataset.zdtpVersion; // e.g. "0.9.1"
+```
+
+The attribute exists only while the full shell is mounted, and it reports the declared package version that built the shell. The browser suite asserts it equals the `version` in the installed `node_modules/@takazudo/zdtp/package.json`.
+
 ## Local dev commands
 
 | Command | Description |
@@ -56,9 +66,10 @@ Requires `pnpm dev` to be running first.
 - **ClientRouter navigation** — sidenav navigation and back/forward keep the same document (a `window.__marker` survives) and exactly one panel instance.
 - **Panel lifecycle** — open/close via the topbar trigger; visibility and token edits persist across navigation and reload.
 - **Token edits** — font, spacing and color edits change the computed style of visible elements.
+- **Build marker** — every opened shell carries a `data-zdtp-version` equal to the installed package's version.
 - **Errors** — every test fails on any console error, page error, or failed request.
 
-CI (`.github/workflows/deploy.yml`) runs a blocking `browser` job on every pull request and on pushes to `main`. A change-detection step runs the suite for anything but content-only changes (`*.md` / `*.mdx` and files outside the source, test, config and CI trees); content-only changes log `skipped: content-only` and pass. The `preview` job skips draft pull requests.
+CI (`.github/workflows/deploy.yml`) runs a blocking `browser` job on every pull request and on pushes to `main`. A change-detection step runs the suite for anything but content-only changes (`*.md` / `*.mdx` and files outside the source, test, config and CI trees); content-only changes log `skipped: content-only` and pass. Dependency manifests, the lockfile and the workflow always run the suite. The production `deploy` job (pushes to `main` only) requires both `build` and `browser` to succeed, so a failed or cancelled browser run blocks it while a content-only push still deploys. The `preview` job skips draft pull requests.
 
 ## What the example proves
 

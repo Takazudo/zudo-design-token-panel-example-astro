@@ -45,9 +45,10 @@ export default defineConfig({
     // ClientRouter runtime, and the Preact island runtime. Discovered late,
     // they re-optimize deps on the first page load, which answers the
     // in-flight adapter import with 504 "Outdated Optimize Dep" and the panel
-    // silently fails to load on that page. The panel owns its own Preact
-    // dependency (zdtp >= 0.8), so no `resolve.dedupe` is needed to share the
-    // host's copy.
+    // silently fails to load on that page. The `preact*` entries are for this
+    // host's own islands (src/components/widgets); the panel itself renders
+    // with its bundled zudo-react runtime (zdtp >= 0.9) and shares nothing
+    // with the host's Preact, so no `resolve.dedupe` is needed.
     optimizeDeps: {
       include: [
         '@takazudo/zdtp/astro/host-adapter',
